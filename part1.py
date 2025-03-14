@@ -17,9 +17,7 @@ df_rets = df_rets.merge(df_rates[['Mkt-RF']], left_index=True, right_index=True,
 df_rets = df_rets.loc["1931-06":] #
 # endregion
 
-
 # PART A
-
 # 1--MAX SHARPE RATIO
 # region
 import numpy as np
@@ -53,10 +51,7 @@ for i in range(window, len(excess_returns)):
 
 # Convert list to DataFrame
 dates = excess_returns.index[window:]
-weights_df = pd.DataFrame(weights_list, index=dates, columns=excess_returns.columns)
-
-print(weights_df.head())
-
+weights_df1 = pd.DataFrame(weights_list, index=dates, columns=excess_returns.columns)
 # endregion
 
 # 2--MAX SHARPE RATIO, SHORT-SALE CONSTRAINED
@@ -105,10 +100,7 @@ for i in range(window, len(excess_returns)):
 
 # Convert list to DataFrame
 dates = excess_returns.index[window:]
-weights_df = pd.DataFrame(weights_list, index=dates, columns=excess_returns.columns)
-
-# Display sample results
-print(weights_df.head())
+weights_df2 = pd.DataFrame(weights_list, index=dates, columns=excess_returns.columns)
 
 # endregion
 
@@ -138,9 +130,7 @@ for i in range(window, len(excess_returns)):
 
 # Convert list to DataFrame
 dates = excess_returns.index[window:]
-weights_df = pd.DataFrame(weights_list, index=dates, columns=excess_returns.columns)
-
-print(weights_df.head())
+weights_df3 = pd.DataFrame(weights_list, index=dates, columns=excess_returns.columns)
 
 # endregion
 
@@ -170,15 +160,15 @@ for i in range(window, len(excess_returns)):
 
 # Convert list to DataFrame
 dates = excess_returns.index[window:]
-weights_df = pd.DataFrame(weights_list, index=dates, columns=excess_returns.columns)
-
-# Display sample results
-print(weights_df.head())
+weights_df4 = pd.DataFrame(weights_list, index=dates, columns=excess_returns.columns)
 
 # endregion
 
 #5--ASSETS HAVE SAME WEIGHT
 # All assets 10%.
+
+weights_df5 = df_rets.copy()
+weights_df5[:] = 0.1
 
 #6--WEIGHTS LINEARLY RELATED TO MARKET CAP
 
@@ -225,12 +215,81 @@ for month in df_rets.index[60:]:  # Start from 5 years after June 1931
     min_variance_weights.append(result.x)
 
 # Convert the minimum variance portfolio weights to DataFrame for easier interpretation
-df_min_variance_weights = pd.DataFrame(min_variance_weights, index=df_rets.index[60:], columns=df_rets.columns)
+weights_df7 = pd.DataFrame(min_variance_weights, index=df_rets.index[60:], columns=df_rets.columns)
 
-# Print or return the minimum variance portfolio weights
-print(df_min_variance_weights)
 
 # endregion
 
+#FINAL--PORTFOLIO COMPARISON
+#region
+df_rets_decimal = df_rets.astype(float) / 100
+
+
+portfolio_returns1 = (df_rets_decimal * weights_df1).sum(axis=1).round(5)
+portfolio_returns2 = (df_rets_decimal * weights_df2).sum(axis=1).round(5)
+portfolio_returns3 = (df_rets_decimal * weights_df3).sum(axis=1).round(5)
+portfolio_returns4 = (df_rets_decimal * weights_df4).sum(axis=1).round(5)
+portfolio_returns5 = (df_rets_decimal * weights_df5).sum(axis=1).round(5)
+portfolio_returns7 = (df_rets_decimal * weights_df7).sum(axis=1).round(5)
+
+df_portfolio_returns = pd.DataFrame({
+    'Portfolio 1': portfolio_returns1,
+    'Portfolio 2': portfolio_returns2,
+    'Portfolio 3': portfolio_returns3,
+    'Portfolio 4': portfolio_returns4,
+    'Portfolio 5': portfolio_returns5,
+    'Portfolio 7': portfolio_returns7
+})
+
+
+pd.set_option("display.max_rows", None)  # Show all rows
+pd.set_option("display.max_columns", None)  # Show all columns
+pd.set_option("display.width", 1000)  # Set max width
+pd.set_option("display.float_format", "{:.5f}".format)  # Format float precision
+
+print(df_portfolio_returns)
+
+import numpy as np
+
+# Define time periods
+periods = {
+    "July 1931 - Dec 2025": ("1931-07", "2025-12"),
+    "Jan 1990 - Dec 2025": ("1990-01", "2025-12"),
+    "Jan 2000 - Dec 2025": ("2000-01", "2025-12"),
+}
+
+# Define risk-free rate (e.g., assumed 3% annually, adjusted for monthly returns)
+import pandas as pd
+
+# Compute metrics
+results = []
+for period, (start, end) in periods.items():
+    df_period = df_portfolio_returns.loc[start:end]
+    risk_free_period = df_rets_decimal.loc[start:end].iloc[:, -1]  # Get actual risk-free rates for the period
+
+    avg_return = df_period.mean()
+    total_return = (1 + df_period).prod() - 1
+    std_dev = df_period.std()
+    sharpe_ratio = (avg_return - risk_free_period.mean()) / std_dev  # Adjusted Sharpe ratio
+
+    for portfolio in df_period.columns:
+        results.append({
+            "Period": period,
+            "Portfolio": portfolio,
+            "Average Return": avg_return[portfolio],
+            "Total Return": total_return[portfolio],
+            "Sharpe Ratio": sharpe_ratio[portfolio]
+        })
+
+# Convert to DataFrame
+df_results = pd.DataFrame(results)
+
+# Pivot for better readability
+df_results_pivot = df_results.pivot(index="Period", columns="Portfolio", values=["Average Return", "Total Return", "Sharpe Ratio"])
+
+# Display results
+print(df_results_pivot)
+
+# endregion
 
 
